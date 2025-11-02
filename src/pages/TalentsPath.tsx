@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 interface TalentsPathProps {
   userName: string;
   onBack: () => void;
+  onNavigateToExpertConnect?: () => void;
 }
 
 const SKILLS = [
@@ -33,7 +34,7 @@ const SKILLS = [
 
 type Phase = "skill-selection" | "quiz-phase-1" | "analysis" | "quiz-phase-2" | "final-analysis" | "results";
 
-export const TalentsPath = ({ userName, onBack }: TalentsPathProps) => {
+export const TalentsPath = ({ userName, onBack, onNavigateToExpertConnect }: TalentsPathProps) => {
   const [phase, setPhase] = useState<Phase>("skill-selection");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [phase1Responses, setPhase1Responses] = useState<QuizResponse[]>([]);
@@ -757,6 +758,7 @@ export const TalentsPath = ({ userName, onBack }: TalentsPathProps) => {
               analysis={careerAnalysis}
               userName={userName}
               onRestart={handleRestart}
+              onNavigateToExpertConnect={onNavigateToExpertConnect}
             />
           )}
         </div>
