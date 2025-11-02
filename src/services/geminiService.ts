@@ -15,11 +15,6 @@ if (!API_KEY) {
 // Initialize Gemini AI with API key (use empty string fallback if not set)
 const genAI = new GoogleGenerativeAI(API_KEY || '');
 
-// Export helper function to check if API is configured
-export const isGeminiConfigured = (): boolean => {
-  return !!API_KEY && validateApiKey(API_KEY);
-};
-
 // System prompts for different analysis types
 const SYSTEM_PROMPTS = {
   CAREER_COUNSELOR: `You are a senior career counselor with 20+ years experience. 
