@@ -18,10 +18,9 @@ export const Landing = ({ onStart }: LandingProps) => {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      onStart();
-    }
-  }, [user, onStart]);
+    // Auto-redirect handled by Index.tsx and App.tsx routing
+    // No need to call onStart here
+  }, [user]);
 
   const handleAuth = async (data: { name?: string; email: string; password: string }) => {
     if (authMode === 'login') {

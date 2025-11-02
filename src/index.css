@@ -785,15 +785,85 @@
     will-change: opacity;
   }
 
-  /* Print styles */
+  /* Print styles - Enhanced for PDF export */
   @media print {
-    .no-print {
-      display: none;
+    .no-print,
+    button,
+    .action-buttons {
+      display: none !important;
     }
     
     * {
       color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
+    
+    body {
+      background: white;
+      color: black;
+    }
+    
+    .card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      border: 1px solid #e5e7eb;
+      box-shadow: none;
+    }
+    
+    .bg-gradient-to-br,
+    .bg-gradient-to-r {
+      background: white !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      color: #111827 !important;
+    }
+    
+    .text-muted-foreground {
+      color: #6b7280 !important;
+    }
+    
+    /* Ensure charts are visible in print */
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    /* Hide interactive elements */
+    .hover\:shadow-lg,
+    .hover\:-translate-y-1,
+    .transition-all {
+      transition: none !important;
+    }
+    
+    /* Page breaks */
+    .page-break-before {
+      page-break-before: always;
+    }
+    
+    .page-break-after {
+      page-break-after: always;
+    }
+    
+    .no-page-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
+  
+  /* Animation for fade-in */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-in;
   }
 
   /* Reduced motion support */

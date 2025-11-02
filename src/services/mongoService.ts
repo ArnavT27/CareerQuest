@@ -163,7 +163,11 @@ export class MongoAuthService {
     // TODO: Replace with actual JWT generation
     /*
     const jwt = require('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    // Use environment variable - throw error if not set in production
+    const secret = process.env.JWT_SECRET || process.env.VITE_JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     
     return jwt.sign(
       { 
@@ -184,7 +188,11 @@ export class MongoAuthService {
     // TODO: Replace with actual JWT verification
     /*
     const jwt = require('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    // Use environment variable - throw error if not set in production
+    const secret = process.env.JWT_SECRET || process.env.VITE_JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     
     try {
       const decoded = jwt.verify(token, secret);
@@ -221,7 +229,7 @@ export const PRODUCTION_SETUP = {
   
   environmentVariables: {
     MONGODB_URI: 'Your MongoDB connection string',
-    JWT_SECRET: 'A secure random string for JWT signing',
+    JWT_SECRET: 'Set JWT_SECRET environment variable (generate a secure random string)',
     NODE_ENV: 'production',
     PORT: '3001'
   },

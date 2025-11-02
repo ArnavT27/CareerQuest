@@ -15,4 +15,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Vite automatically loads .env files from the project root
+  // Make sure your .env.local file is in the same directory as this config file
 }));
