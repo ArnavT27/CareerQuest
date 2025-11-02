@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ScenariosPathProps {
   userName: string;
   onBack: () => void;
+  onNavigateToExpertConnect?: () => void;
 }
 
 interface PersonalityTrait {
@@ -372,7 +373,7 @@ const FIELDS = [
   }
 ];
 
-const ScenariosPath = ({ userName, onBack }: ScenariosPathProps) => {
+const ScenariosPath = ({ userName, onBack, onNavigateToExpertConnect }: ScenariosPathProps) => {
   const [fieldOfInterest, setFieldOfInterest] = useState<string>("");
   const [selectedNiche, setSelectedNiche] = useState<string>("");
   const [phase, setPhase] = useState<"field-selection" | "niche-selection" | "scenario-quiz" | "results">("field-selection");

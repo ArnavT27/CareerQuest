@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CareerAnalysis, CareerRecommendation, PersonalityTrait, SkillDetail } from "@/services/geminiService";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell } from 'recharts';
-import { CheckCircle, Clock, TrendingUp, Award, Zap, Lightbulb, ArrowRight, BookOpen, Users, Briefcase, Star, BarChart2, BarChart as BarChartIcon, PieChart, Target, Activity, AlertTriangle, CheckCircle2, Download, RefreshCw, Scale, DollarSign } from 'lucide-react';
+import { CheckCircle, Clock, TrendingUp, Award, Zap, Lightbulb, ArrowRight, BookOpen, Users, Briefcase, Star, BarChart2, BarChart as BarChartIcon, PieChart, Target, Activity, AlertTriangle, CheckCircle2, Download, RefreshCw, Scale, DollarSign, Phone, MessageSquare } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 // Define types for learning path items
@@ -56,9 +56,10 @@ interface ResultsDisplayProps {
   analysis: CareerAnalysis;
   userName: string;
   onRestart: () => void;
+  onNavigateToExpertConnect?: () => void;
 }
 
-export const ResultsDisplay = ({ analysis, userName, onRestart }: ResultsDisplayProps) => {
+export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpertConnect }: ResultsDisplayProps) => {
   const getSkillColor = (score: number) => {
     if (score >= 8) return "bg-primary";
     if (score >= 6) return "bg-secondary";
@@ -113,7 +114,7 @@ export const ResultsDisplay = ({ analysis, userName, onRestart }: ResultsDisplay
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Your personalized career roadmap with AI-powered insights and actionable recommendations
         </p>
-        <div className="flex justify-center gap-4 pt-4">
+        <div className="flex justify-center gap-4 pt-4 flex-wrap">
           <Button variant="outline" className="gap-2" onClick={onRestart}>
             <RefreshCw className="h-4 w-4" />
             Retake Assessment
@@ -122,6 +123,16 @@ export const ResultsDisplay = ({ analysis, userName, onRestart }: ResultsDisplay
             <Download className="h-4 w-4" />
             Download Full Report
           </Button>
+          {onNavigateToExpertConnect && (
+            <Button 
+              variant="outline" 
+              className="gap-2 border-primary/50 hover:bg-primary/10"
+              onClick={onNavigateToExpertConnect}
+            >
+              <Phone className="h-4 w-4" />
+              Connect with Experts
+            </Button>
+          )}
         </div>
       </div>
 
