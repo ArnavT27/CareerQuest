@@ -21,14 +21,13 @@ const ProgressBar = ({ value, className = '' }: ProgressBarProps) => {
 };
 
 import { ScenarioQuiz } from "@/components/ScenarioQuiz";
-import { ResultsDisplay } from "@/components/ResultsDisplay";
+import { ScenarioResultsDisplay } from "@/components/ScenarioResultsDisplay";
 import { geminiService } from "@/services/geminiService";
 import { useToast } from "@/hooks/use-toast";
 
 interface ScenariosPathProps {
   userName: string;
   onBack: () => void;
-  onNavigateToExpertConnect?: () => void;
 }
 
 interface PersonalityTrait {
@@ -53,10 +52,55 @@ interface LearningPathItem {
   measurableOutcome: string;
 }
 
+interface JobOpportunity {
+  title: string;
+  companyType: string;
+  salaryRange: string;
+  experienceLevel: string;
+  location: string;
+  keySkills: string[];
+  growthPotential: string;
+  description?: string;
+}
+
+interface StartupGuide {
+  sector: string;
+  howToStart: {
+    steps: Array<{ step: string; description: string; timeline: string }>;
+    initialInvestment: string;
+    keyRequirements: string[];
+  };
+  businessPlanning: {
+    businessModel: string;
+    revenueStreams: string[];
+    targetCustomers: string;
+    competitiveAnalysis: string;
+    marketingStrategy: string;
+  };
+  finance: {
+    startupCosts: string;
+    fundingOptions: Array<{ type: string; description: string; pros: string[]; cons: string[] }>;
+    revenueProjections: string;
+    breakEvenAnalysis: string;
+    financialMilestones: Array<{ milestone: string; timeline: string; target: string }>;
+  };
+}
+
+interface ProsAndCons {
+  pros: Array<{ point: string; description: string }>;
+  cons: Array<{ point: string; description: string }>;
+  overallAssessment: string;
+}
+
 interface CareerAnalysis {
   personalityProfile?: PersonalityTrait[];
   skillGaps?: SkillGap[];
   learningPath?: LearningPathItem[];
+  jobOpportunities?: JobOpportunity[];
+  startupGuide?: StartupGuide;
+  prosAndCons?: ProsAndCons;
+  fieldOfInterest?: string;
+  niche?: string;
 }
 
 interface CareerRecommendation {
@@ -373,7 +417,7 @@ const FIELDS = [
   }
 ];
 
-const ScenariosPath = ({ userName, onBack, onNavigateToExpertConnect }: ScenariosPathProps) => {
+const ScenariosPath = ({ userName, onBack }: ScenariosPathProps) => {
   const [fieldOfInterest, setFieldOfInterest] = useState<string>("");
   const [selectedNiche, setSelectedNiche] = useState<string>("");
   const [phase, setPhase] = useState<"field-selection" | "niche-selection" | "scenario-quiz" | "results">("field-selection");
@@ -401,92 +445,180 @@ const ScenariosPath = ({ userName, onBack, onNavigateToExpertConnect }: Scenario
     setSelectedNiche(nicheId === selectedNiche ? "" : nicheId);
   };
 
-  const handleScenarioComplete = (results: any) => {
+  const handleScenarioComplete = async (analysisResult: any) => {
     setIsAnalyzing(true);
-    // Create a mock analysis with proper types
-    const mockAnalysis: CareerAnalysis = {
-      personalityProfile: [
-        {
-          trait: "Analytical",
-          score: 85,
-          description: "Strong ability to analyze complex problems and data",
-          careerImplications: "Thrives in roles requiring critical thinking and data analysis"
-        },
-        {
-          trait: "Leadership",
-          score: 78,
-          description: "Demonstrates leadership potential and team coordination",
-          careerImplications: "Well-suited for leadership and management positions"
-        },
-        {
-          trait: "Creativity",
-          score: 65,
-          description: "Moderate creative problem-solving abilities",
-          careerImplications: "Can contribute innovative ideas in structured environments"
-        },
-        {
-          trait: "Teamwork",
-          score: 90,
-          description: "Excellent team player and collaborator",
-          careerImplications: "Thrives in collaborative work environments"
-        },
-        {
-          trait: "Adaptability",
-          score: 82,
-          description: "Adapts well to change and new challenges",
-          careerImplications: "Suitable for dynamic and evolving roles"
-        }
-      ],
-      skillGaps: [
-        {
-          skill: "Advanced Data Analysis",
-          currentLevel: 3,
-          targetLevel: 5,
-          importance: 4.5
-        },
-        {
-          skill: "Cloud Architecture",
-          currentLevel: 2,
-          targetLevel: 4,
-          importance: 4.0
-        },
-        {
-          skill: "Project Management",
-          currentLevel: 4,
-          targetLevel: 5,
-          importance: 4.2
-        }
-      ],
-      learningPath: [
-        {
-          skill: "Advanced Data Analysis",
-          resources: [
-            "Data Science Specialization on Coursera",
-            "Advanced SQL Course"
-          ],
-          action: "Complete online courses and apply skills to real-world projects",
-          timeline: "3-6 months",
-          measurableOutcome: "Ability to perform complex data analysis and visualization"
-        },
-        {
-          skill: "Cloud Architecture",
-          resources: [
-            "AWS Certified Solutions Architect",
-            "Cloud Design Patterns"
-          ],
-          action: "Obtain AWS certification and implement cloud solutions",
-          timeline: "4-8 months",
-          measurableOutcome: "Ability to design and deploy cloud infrastructure"
-        }
-      ]
-    };
+    try {
+      const fieldName = fieldOfInterest;
+      const nicheName = selectedNiche || fieldOfInterest;
+      
+      // The analysisResult is already the result from analyzeScenarioResponses
+      // We just need to generate additional comprehensive data
+      console.log('📊 Processing scenario analysis results for:', fieldName);
+      console.log('📋 Analysis result keys:', Object.keys(analysisResult || {}));
 
-    // Simulate API call
-    setTimeout(() => {
-      setCareerAnalysis(mockAnalysis);
+      // Generate additional comprehensive data in parallel
+      console.log('🚀 Generating comprehensive data: jobs, startup guide, pros/cons');
+      const [jobOpportunities, startupGuide, prosAndCons] = await Promise.all([
+        geminiService.generateJobOpportunities(fieldName, nicheName, analysisResult).catch((err) => {
+          console.error('❌ Error generating job opportunities:', err);
+          return geminiService.getFallbackJobOpportunities(fieldName, nicheName);
+        }),
+        geminiService.generateStartupGuide(fieldName, nicheName, analysisResult).catch((err) => {
+          console.error('❌ Error generating startup guide:', err);
+          return geminiService.getFallbackStartupGuide(fieldName, nicheName);
+        }),
+        geminiService.generateProsAndCons(fieldName, nicheName).catch((err) => {
+          console.error('❌ Error generating pros and cons:', err);
+          return geminiService.getFallbackProsAndCons(fieldName, nicheName);
+        })
+      ]);
+      
+      console.log('✅ Data generation complete:', {
+        jobs: Array.isArray(jobOpportunities) ? jobOpportunities.length : 0,
+        startup: !!startupGuide,
+        prosCons: !!prosAndCons
+      });
+
+      // Map skill gaps to ensure correct structure
+      const mappedSkillGaps = (analysisResult.skillGaps || []).map((gap: any) => ({
+        skill: gap.skill || "Unknown Skill",
+        currentLevel: gap.currentLevel || gap.current || 0,
+        targetLevel: gap.targetLevel || gap.requiredLevel || 5,
+        importance: gap.importance || gap.priority === "high" ? 4.5 : gap.priority === "medium" ? 3.5 : 2.5
+      }));
+
+      // Map learning path to ensure correct structure
+      const mappedLearningPath = (analysisResult.learningPath || []).map((item: any) => ({
+        skill: item.skill || "Unknown Skill",
+        action: item.action || "Develop this skill",
+        timeline: item.timeline || "3-6 months",
+        resources: item.resources || ["Online courses", "Practice projects", "Industry resources"],
+        measurableOutcome: item.measurableOutcome || "Improved competency in this skill",
+        difficultyLevel: item.difficultyLevel || "Intermediate"
+      }));
+
+      // Combine all analysis data
+      const comprehensiveAnalysis: CareerAnalysis = {
+        personalityProfile: (analysisResult.personalityProfile || []).map((trait: any) => ({
+          trait: trait.trait || trait.name || "Unknown",
+          score: typeof trait.score === 'number' ? trait.score : (trait.score || 0) * 10 || 0, // Convert 1-10 scale to 0-100 if needed
+          description: trait.description || trait.behavioralDescription || "",
+          careerImplications: Array.isArray(trait.careerImplications) 
+            ? trait.careerImplications.join(", ")
+            : (trait.careerImplications || trait.careerImplications || "")
+        })),
+        skillGaps: mappedSkillGaps,
+        learningPath: mappedLearningPath,
+        jobOpportunities: Array.isArray(jobOpportunities) ? jobOpportunities : undefined,
+        startupGuide: startupGuide || undefined,
+        prosAndCons: prosAndCons || undefined,
+        fieldOfInterest: fieldName,
+        niche: nicheName
+      };
+
+      console.log('📊 Comprehensive analysis data:', {
+        personalityProfile: comprehensiveAnalysis.personalityProfile?.length || 0,
+        skillGaps: comprehensiveAnalysis.skillGaps?.length || 0,
+        learningPath: comprehensiveAnalysis.learningPath?.length || 0,
+        jobOpportunities: comprehensiveAnalysis.jobOpportunities?.length || 0,
+        startupGuide: !!comprehensiveAnalysis.startupGuide,
+        prosAndCons: !!comprehensiveAnalysis.prosAndCons
+      });
+
+      setCareerAnalysis(comprehensiveAnalysis);
       setIsAnalyzing(false);
       setPhase("results");
-    }, 1500);
+    } catch (error) {
+      console.error('❌ Error analyzing scenario responses:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze scenario responses. Using fallback data.",
+        variant: "destructive",
+      });
+      
+      // Fallback analysis - try to generate with fallback methods
+      try {
+        const [fallbackJobs, fallbackStartup, fallbackProsCons] = await Promise.all([
+          geminiService.getFallbackJobOpportunities(fieldOfInterest, selectedNiche || fieldOfInterest).catch(() => []),
+          geminiService.getFallbackStartupGuide(fieldOfInterest, selectedNiche || fieldOfInterest).catch(() => null),
+          geminiService.getFallbackProsAndCons(fieldOfInterest, selectedNiche || fieldOfInterest).catch(() => null)
+        ]);
+
+        const fallbackAnalysis: CareerAnalysis = {
+          personalityProfile: [
+            {
+              trait: "Analytical",
+              score: 85,
+              description: "Strong ability to analyze complex problems and data",
+              careerImplications: "Thrives in roles requiring critical thinking and data analysis"
+            },
+            {
+              trait: "Leadership",
+              score: 78,
+              description: "Demonstrates leadership potential and team coordination",
+              careerImplications: "Well-suited for leadership and management positions"
+            },
+            {
+              trait: "Teamwork",
+              score: 90,
+              description: "Excellent team player and collaborator",
+              careerImplications: "Thrives in collaborative work environments"
+            }
+          ],
+          skillGaps: [
+            {
+              skill: "Advanced " + fieldOfInterest + " Skills",
+              currentLevel: 3,
+              targetLevel: 5,
+              importance: 4.0
+            },
+            {
+              skill: "Industry-Specific Knowledge",
+              currentLevel: 2,
+              targetLevel: 4,
+              importance: 3.5
+            }
+          ],
+          learningPath: [
+            {
+              skill: "Advanced " + fieldOfInterest + " Skills",
+              action: "Complete advanced courses and practical projects",
+              timeline: "4-6 months",
+              resources: ["Online courses", "Industry certifications", "Hands-on projects"],
+              measurableOutcome: "Demonstrate advanced competency",
+              difficultyLevel: "Intermediate"
+            }
+          ],
+          jobOpportunities: Array.isArray(fallbackJobs) ? fallbackJobs : undefined,
+          startupGuide: fallbackStartup || undefined,
+          prosAndCons: fallbackProsCons || undefined,
+          fieldOfInterest: fieldOfInterest,
+          niche: selectedNiche
+        };
+        
+        setCareerAnalysis(fallbackAnalysis);
+      } catch (fallbackError) {
+        console.error('❌ Error with fallback analysis:', fallbackError);
+        const basicFallback: CareerAnalysis = {
+          personalityProfile: [
+            {
+              trait: "Analytical",
+              score: 85,
+              description: "Strong ability to analyze complex problems and data",
+              careerImplications: "Thrives in roles requiring critical thinking and data analysis"
+            }
+          ],
+          skillGaps: [],
+          learningPath: [],
+          fieldOfInterest: fieldOfInterest,
+          niche: selectedNiche
+        };
+        setCareerAnalysis(basicFallback);
+      }
+      
+      setIsAnalyzing(false);
+      setPhase("results");
+    }
   };
 
   const handleRestart = () => {
@@ -641,149 +773,11 @@ const ScenariosPath = ({ userName, onBack, onNavigateToExpertConnect }: Scenario
     );
   };
 
-  const renderResults = () => {
-    if (!careerAnalysis || !careerAnalysis.personalityProfile) {
-      return (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-4">😕</div>
-          <h2 className="text-2xl font-bold mb-2">No Results Found</h2>
-          <p className="text-muted-foreground mb-6">We couldn&apos;t generate your career analysis. Please try again.</p>
-          <Button onClick={() => setPhase("field-selection")}>
-            Start Over
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="container mx-auto px-4 py-12 max-w-6xl">
-        <div className="space-y-8">
-          {/* Personality Profile Section */}
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Personality Profile</h2>
-            <div className="space-y-4">
-              {careerAnalysis.personalityProfile?.map((trait, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-medium">{trait.trait}</h3>
-                    <span className="text-sm text-muted-foreground">{trait.score}/100</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{ width: `${trait.score}%` }}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">{trait.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium">Career Implications:</span> {trait.careerImplications}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Skill Gaps Section */}
-          {careerAnalysis.skillGaps && careerAnalysis.skillGaps.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Skill Gaps</h2>
-              <div className="space-y-4">
-                {careerAnalysis.skillGaps.map((gap, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-medium">{gap.skill}</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm">
-                          {gap.currentLevel} → {gap.targetLevel}
-                        </span>
-                        <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                          {gap.importance}/5 Importance
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{
-                          width: `${(gap.currentLevel / gap.targetLevel) * 100}%`,
-                          maxWidth: '100%'
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Learning Path Section */}
-          {careerAnalysis.learningPath && careerAnalysis.learningPath.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Recommended Learning Path</h2>
-              <div className="space-y-6">
-                {careerAnalysis.learningPath.map((item, index) => (
-                  <div key={index} className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-primary font-medium">{index + 1}</span>
-                      </div>
-                      <h3 className="text-lg font-medium">{item.skill}</h3>
-                    </div>
-
-                    <div className="pl-11 space-y-3">
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Action Items</h4>
-                        <p className="text-sm">{item.action}</p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Timeline</h4>
-                        <p className="text-sm">{item.timeline}</p>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Resources</h4>
-                        <ul className="list-disc list-inside space-y-1 mt-1">
-                          {item.resources.map((resource, resIndex) => (
-                            <li key={resIndex} className="text-sm">{resource}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Expected Outcome</h4>
-                        <p className="text-sm">{item.measurableOutcome}</p>
-                      </div>
-                    </div>
-
-                    {index < careerAnalysis.learningPath!.length - 1 && (
-                      <div className="pl-11 pt-2">
-                        <div className="h-6 w-px bg-border mx-auto"></div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-center space-x-4 pt-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFieldOfInterest("");
-                setSelectedNiche("");
-                setPhase("field-selection");
-              }}
-            >
-              Start New Analysis
-            </Button>
-            <Button>Save Results</Button>
-          </div>
-        </div>
-      </div>
-    );
+  const handleRestartResults = () => {
+    setFieldOfInterest("");
+    setSelectedNiche("");
+    setCareerAnalysis(null);
+    setPhase("field-selection");
   };
 
   // Component's return statement
@@ -859,7 +853,23 @@ const ScenariosPath = ({ userName, onBack, onNavigateToExpertConnect }: Scenario
               {phase === "field-selection" && renderFieldSelection()}
               {phase === "niche-selection" && renderNicheSelection()}
               {phase === "scenario-quiz" && renderScenarioPhase()}
-              {phase === "results" && renderResults()}
+              {phase === "results" && careerAnalysis && (
+                <ScenarioResultsDisplay
+                  analysis={careerAnalysis}
+                  userName={userName}
+                  onRestart={handleRestartResults}
+                />
+              )}
+              {phase === "results" && !careerAnalysis && (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">😕</div>
+                  <h2 className="text-2xl font-bold mb-2">No Results Found</h2>
+                  <p className="text-muted-foreground mb-6">We couldn&apos;t generate your career analysis. Please try again.</p>
+                  <Button onClick={handleRestartResults}>
+                    Start Over
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>

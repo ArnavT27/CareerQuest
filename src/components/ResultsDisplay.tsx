@@ -1,12 +1,13 @@
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CareerAnalysis, CareerRecommendation, PersonalityTrait, SkillDetail } from "@/services/geminiService";
+import { CareerAnalysis, CareerRecommendation, PersonalityTrait, SkillDetail, geminiService } from "@/services/geminiService";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Cell } from 'recharts';
-import { CheckCircle, Clock, TrendingUp, Award, Zap, Lightbulb, ArrowRight, BookOpen, Users, Briefcase, Star, BarChart2, BarChart as BarChartIcon, PieChart, Target, Activity, AlertTriangle, CheckCircle2, Download, RefreshCw, Scale, DollarSign, Phone, MessageSquare } from 'lucide-react';
+import { CheckCircle, Clock, TrendingUp, Award, Zap, Lightbulb, ArrowRight, BookOpen, Users, Briefcase, Star, BarChart2, BarChart as BarChartIcon, PieChart, Target, Activity, AlertTriangle, CheckCircle2, Download, RefreshCw, Scale, DollarSign, Rocket, Building2, FileText, DollarSign as DollarIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 // Define types for learning path items
@@ -18,6 +19,59 @@ interface LearningPathItem {
   measurableOutcome?: string;
   prerequisites?: string;
   resources?: string[];
+}
+
+// Define startup roadmap types
+interface StartupRoadmap {
+  businessIdea: {
+    concept: string;
+    targetMarket: string;
+    uniqueValueProposition: string;
+    problemStatement: string;
+    solution: string;
+  };
+  businessPlan: {
+    executiveSummary: string;
+    marketAnalysis: string;
+    competitiveAdvantage: string;
+    revenueModel: string;
+    goToMarketStrategy: string;
+  };
+  fundingStrategy: {
+    totalRequired: string;
+    fundingStages: Array<{
+      stage: string;
+      amount: string;
+      purpose: string;
+      timeline: string;
+      investorType: string;
+    }>;
+    sources: string[];
+  };
+  teamBuilding: {
+    coreTeam: Array<{
+      role: string;
+      skills: string[];
+      responsibilities: string[];
+    }>;
+    hiringPlan: Array<{
+      phase: string;
+      positions: string[];
+      timeline: string;
+    }>;
+  };
+  milestones: Array<{
+    milestone: string;
+    timeline: string;
+    keyDeliverables: string[];
+    successMetrics: string[];
+  }>;
+  resources: {
+    tools: string[];
+    platforms: string[];
+    mentorship: string[];
+    communities: string[];
+  };
 }
 
 // Helper function to generate color shades
@@ -56,10 +110,14 @@ interface ResultsDisplayProps {
   analysis: CareerAnalysis;
   userName: string;
   onRestart: () => void;
-  onNavigateToExpertConnect?: () => void;
 }
 
-export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpertConnect }: ResultsDisplayProps) => {
+export const ResultsDisplay = ({ analysis, userName, onRestart }: ResultsDisplayProps) => {
+  // State for career path selection (job opportunities vs startup)
+  const [careerPathType, setCareerPathType] = useState<'jobs' | 'startup' | null>(null);
+  const [startupRoadmap, setStartupRoadmap] = useState<StartupRoadmap | null>(null);
+  const [isGeneratingStartup, setIsGeneratingStartup] = useState(false);
+
   const getSkillColor = (score: number) => {
     if (score >= 8) return "bg-primary";
     if (score >= 6) return "bg-secondary";
@@ -99,6 +157,39 @@ export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpe
     priority: gap.priority
   }));
 
+  // Generate startup roadmap using Gemini AI
+  const handleGenerateStartup = async () => {
+    setIsGeneratingStartup(true);
+    try {
+      // Get top skills from the analysis
+      const topSkills = analysis.topStrengths?.slice(0, 3) || ['Problem Solving', 'Leadership', 'Innovation'];
+      
+      // Get niche/field from career recommendations if available
+      const niche = analysis.careerRecommendations?.[0]?.field || undefined;
+      
+      console.log('🚀 Generating AI-powered startup roadmap for:', { topSkills, niche });
+      
+      // Call Gemini AI to generate personalized startup roadmap
+      const roadmap = await geminiService.generateStartupRoadmap(
+        topSkills,
+        analysis,
+        niche
+      );
+      
+      console.log('✅ Startup roadmap generated:', roadmap);
+      setStartupRoadmap(roadmap as StartupRoadmap);
+    } catch (error) {
+      console.error('❌ Error generating startup roadmap:', error);
+      // Fallback will be handled by the service
+      const topSkills = analysis.topStrengths?.slice(0, 3) || ['Problem Solving', 'Leadership'];
+      const niche = analysis.careerRecommendations?.[0]?.field || undefined;
+      const fallbackRoadmap = geminiService.getFallbackStartupRoadmap(topSkills, niche);
+      setStartupRoadmap(fallbackRoadmap as StartupRoadmap);
+    } finally {
+      setIsGeneratingStartup(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 animate-fade-in-up">
       {/* Header with Score */}
@@ -114,7 +205,7 @@ export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpe
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
           Your personalized career roadmap with AI-powered insights and actionable recommendations
         </p>
-        <div className="flex justify-center gap-4 pt-4 flex-wrap">
+        <div className="flex justify-center gap-4 pt-4">
           <Button variant="outline" className="gap-2" onClick={onRestart}>
             <RefreshCw className="h-4 w-4" />
             Retake Assessment
@@ -123,16 +214,6 @@ export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpe
             <Download className="h-4 w-4" />
             Download Full Report
           </Button>
-          {onNavigateToExpertConnect && (
-            <Button 
-              variant="outline" 
-              className="gap-2 border-primary/50 hover:bg-primary/10"
-              onClick={onNavigateToExpertConnect}
-            >
-              <Phone className="h-4 w-4" />
-              Connect with Experts
-            </Button>
-          )}
         </div>
       </div>
 
@@ -386,133 +467,599 @@ export const ResultsDisplay = ({ analysis, userName, onRestart, onNavigateToExpe
 
         {/* Career Recommendations Tab */}
         <TabsContent value="careers" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {enhancedCareerRecommendations.map((career, index) => {
-              const matchColor = career.matchScore >= 85 ? 'green' : 
-                               career.matchScore >= 70 ? 'blue' : 
-                               career.matchScore >= 50 ? 'amber' : 'gray';
-              
-              return (
-                <Card key={index} className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-t-4 border-primary/20 hover:border-primary/50">
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-foreground">{career.title}</h3>
-                        <p className="text-sm text-muted-foreground">{career.field}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-2xl font-bold text-${matchColor}-600`}>
-                          {career.matchScore}%
-                        </div>
-                        <p className="text-xs text-muted-foreground">Match Score</p>
-                      </div>
+          {/* Path Selection UI - show this first if no path selected */}
+          {!careerPathType && (
+            <div className="space-y-8">
+              <div className="text-center space-y-4">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  Choose Your Career Path
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Explore job opportunities or build your own startup based on your unique skills and interests
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                {/* Job Opportunities Card */}
+                <Card 
+                  className="group relative overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-2xl border-2 hover:border-primary/50"
+                  onClick={() => setCareerPathType('jobs')}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-500/5 group-hover:from-blue-500/5 group-hover:to-blue-500/10 transition-all duration-500" />
+                  <div className="relative p-8">
+                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/10 mb-6 group-hover:bg-blue-500/20 transition-colors">
+                      <Building2 className="w-8 h-8 text-blue-500" />
                     </div>
-                    
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
-                      {career.description}
+                    <h3 className="text-2xl font-bold mb-3 text-center">Job Opportunities</h3>
+                    <p className="text-muted-foreground mb-6 text-center">
+                      Explore roles at established companies and growing startups
                     </p>
-                    
-                    <div className="space-y-3 text-sm mb-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-green-500" />
-                        <span className="font-medium">Salary:</span>
-                        <span className="text-foreground">{career.salaryRange}</span>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        <span>Stable income and benefits</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-blue-500" />
-                        <span className="font-medium">Growth:</span>
-                        <span className="text-foreground">{career.growthProspects}</span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        <span>Proven career progression</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-amber-500" />
-                        <span className="font-medium">Transition:</span>
-                        <span className="text-foreground">{career.timeToTransition}</span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        <span>Established company culture</span>
                       </div>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium mb-2">Key Skills</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(Array.isArray(career.requiredSkills) ? career.requiredSkills.slice(0, 5) : []).map((skill, skillIndex) => (
-                          <Badge 
-                            key={skillIndex} 
-                            variant="secondary" 
-                            className="text-xs py-1 px-2 font-normal"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                        {career.requiredSkills?.length > 5 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{career.requiredSkills.length - 5} more
-                          </Badge>
-                        )}
+                      <div className="flex items-center gap-3 text-sm">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        <span>Mentorship opportunities</span>
                       </div>
                     </div>
-                    
-                    <div className="flex justify-between items-center pt-4 border-t">
-                      <Button variant="outline" size="sm" className="gap-1.5">
-                        <BookOpen className="w-4 h-4" />
-                        Learn More
-                      </Button>
-                      <Button size="sm" className="gap-1.5">
-                        View Roadmap
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button className="w-full group-hover:bg-blue-600 transition-colors">
+                      Explore Jobs <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
                   </div>
                 </Card>
-              );
-            })}
-          </div>
-          
-          {/* Career Comparison Tool */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Scale className="w-5 h-5 text-purple-500" />
-                Career Path Comparison
-              </CardTitle>
-              <CardDescription>
-                Compare up to 3 career paths to find your best fit
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="space-y-4">
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder={`Select Career ${i + 1}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {enhancedCareerRecommendations.map((career, idx) => (
-                          <SelectItem key={idx} value={career.title}>
-                            {career.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {i < 2 && (
-                      <div className="hidden md:flex items-center justify-center h-full">
-                        <div className="text-muted-foreground text-sm">
-                          vs
-                        </div>
+
+                {/* Startup Path Card */}
+                <Card 
+                  className="group relative overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-2xl border-2 hover:border-secondary/50"
+                  onClick={() => {
+                    setCareerPathType('startup');
+                    handleGenerateStartup();
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-orange-500/5 group-hover:from-orange-500/5 group-hover:to-orange-500/10 transition-all duration-500" />
+                  <div className="relative p-8">
+                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-orange-500/10 mb-6 group-hover:bg-orange-500/20 transition-colors">
+                      <Rocket className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 text-center">Build Your Startup</h3>
+                    <p className="text-muted-foreground mb-6 text-center">
+                      Get a complete roadmap to launch your own venture
+                    </p>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-3 text-sm">
+                        <Star className="w-5 h-5 text-orange-500" />
+                        <span>AI-generated business plan</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3 text-sm">
+                        <Star className="w-5 h-5 text-orange-500" />
+                        <span>Funding strategy & milestones</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Star className="w-5 h-5 text-orange-500" />
+                        <span>Team building guidance</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <Star className="w-5 h-5 text-orange-500" />
+                        <span>Resources & mentorship</span>
+                      </div>
+                    </div>
+                    <Button variant="secondary" className="w-full group-hover:bg-orange-600 transition-colors">
+                      Get Startup Roadmap <Rocket className="ml-2 w-4 h-4" />
+                    </Button>
                   </div>
-                ))}
+                </Card>
               </div>
-              
-              <div className="mt-6 flex justify-center">
-                <Button variant="outline" className="gap-2">
-                  <BarChart2 className="w-4 h-4" />
-                  Compare Careers
+            </div>
+          )}
+
+          {/* Loading state for startup generation */}
+          {careerPathType === 'startup' && isGeneratingStartup && (
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center mb-6">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center animate-spin-slow">
+                    <Rocket className="w-8 h-8 text-orange-500" />
+                  </div>
+                  <div className="absolute -inset-1.5 bg-orange-500/20 rounded-full -z-10 animate-ping" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold mb-3">Creating Your Startup Roadmap</h2>
+              <p className="text-muted-foreground">Our AI is generating a comprehensive business plan tailored to your skills...</p>
+            </div>
+          )}
+
+          {/* Job Opportunities Content */}
+          {careerPathType === 'jobs' && (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Job Opportunities</h2>
+                <Button variant="outline" onClick={() => setCareerPathType(null)}>
+                  Change Path
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {enhancedCareerRecommendations.map((career, index) => {
+                  const matchColor = career.matchScore >= 85 ? 'green' : 
+                                   career.matchScore >= 70 ? 'blue' : 
+                                   career.matchScore >= 50 ? 'amber' : 'gray';
+                  
+                  return (
+                    <Card key={index} className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-t-4 border-primary/20 hover:border-primary/50">
+                      <div className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold text-foreground">{career.title}</h3>
+                            <p className="text-sm text-muted-foreground">{career.field}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-2xl font-bold text-${matchColor}-600`}>
+                              {career.matchScore}%
+                            </div>
+                            <p className="text-xs text-muted-foreground">Match Score</p>
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                          {career.description}
+                        </p>
+                        
+                        <div className="space-y-3 text-sm mb-4">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-green-500" />
+                            <span className="font-medium">Salary:</span>
+                            <span className="text-foreground">{career.salaryRange}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium">Growth:</span>
+                            <span className="text-foreground">{career.growthProspects}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-500" />
+                            <span className="font-medium">Transition:</span>
+                            <span className="text-foreground">{career.timeToTransition}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium mb-2">Key Skills</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(Array.isArray(career.requiredSkills) ? career.requiredSkills.slice(0, 5) : []).map((skill, skillIndex) => (
+                              <Badge 
+                                key={skillIndex} 
+                                variant="secondary" 
+                                className="text-xs py-1 px-2 font-normal"
+                              >
+                                {skill}
+                              </Badge>
+                            ))}
+                            {career.requiredSkills?.length > 5 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{career.requiredSkills.length - 5} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center pt-4 border-t">
+                          <Button variant="outline" size="sm" className="gap-1.5">
+                            <BookOpen className="w-4 h-4" />
+                            Learn More
+                          </Button>
+                          <Button size="sm" className="gap-1.5">
+                            View Roadmap
+                            <ArrowRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          
+          {/* Career Comparison Tool */}
+          {careerPathType === 'jobs' && (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scale className="w-5 h-5 text-purple-500" />
+                  Career Path Comparison
+                </CardTitle>
+                <CardDescription>
+                  Compare up to 3 career paths to find your best fit
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="space-y-4">
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select Career ${i + 1}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {enhancedCareerRecommendations.map((career, idx) => (
+                            <SelectItem key={idx} value={career.title}>
+                              {career.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {i < 2 && (
+                        <div className="hidden md:flex items-center justify-center h-full">
+                          <div className="text-muted-foreground text-sm">
+                            vs
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="mt-6 flex justify-center">
+                  <Button variant="outline" className="gap-2">
+                    <BarChart2 className="w-4 h-4" />
+                    Compare Careers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Startup Roadmap Content */}
+          {careerPathType === 'startup' && startupRoadmap && !isGeneratingStartup && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Your Startup Roadmap</h2>
+                <Button variant="outline" onClick={() => setCareerPathType(null)}>
+                  Change Path
+                </Button>
+              </div>
+
+              {/* Business Idea Section */}
+              <Card className="border-t-4 border-orange-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-600">
+                    <Lightbulb className="w-6 h-6" />
+                    Business Concept
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm text-muted-foreground">CONCEPT</h4>
+                      <p className="text-lg">{startupRoadmap.businessIdea.concept}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-sm text-muted-foreground">TARGET MARKET</h4>
+                      <p className="text-lg">{startupRoadmap.businessIdea.targetMarket}</p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <h4 className="font-semibold text-red-800 mb-2">⚠️ Problem</h4>
+                      <p className="text-sm text-red-700">{startupRoadmap.businessIdea.problemStatement}</p>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <h4 className="font-semibold text-green-800 mb-2">✨ Solution</h4>
+                      <p className="text-sm text-green-700">{startupRoadmap.businessIdea.solution}</p>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-blue-800 mb-2">🎯 Unique Value Proposition</h4>
+                    <p className="text-blue-700">{startupRoadmap.businessIdea.uniqueValueProposition}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Business Plan Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-purple-600" />
+                    Business Plan Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-2">Executive Summary</h4>
+                      <p className="text-sm text-muted-foreground">{startupRoadmap.businessPlan.executiveSummary}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">Competitive Advantage</h4>
+                      <p className="text-sm text-muted-foreground">{startupRoadmap.businessPlan.competitiveAdvantage}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Market Analysis</h4>
+                    <p className="text-sm text-muted-foreground">{startupRoadmap.businessPlan.marketAnalysis}</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-2">💰 Revenue Model</h4>
+                      <p className="text-sm text-muted-foreground">{startupRoadmap.businessPlan.revenueModel}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-2">🚀 Go-to-Market Strategy</h4>
+                      <p className="text-sm text-muted-foreground">{startupRoadmap.businessPlan.goToMarketStrategy}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Funding Strategy */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarIcon className="w-6 h-6 text-green-600" />
+                    Funding Strategy
+                  </CardTitle>
+                  <CardDescription>Total Funding Required: {startupRoadmap.fundingStrategy.totalRequired}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    {startupRoadmap.fundingStrategy.fundingStages.map((stage, index) => (
+                      <div key={index} className="border rounded-lg p-6 hover:shadow-lg transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-bold">{stage.stage}</h4>
+                          <Badge variant="secondary" className="text-lg px-3 py-1">
+                            {stage.amount}
+                          </Badge>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Purpose:</span>
+                            <p className="font-medium mt-1">{stage.purpose}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Timeline:</span>
+                            <p className="font-medium mt-1">{stage.timeline}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Investors:</span>
+                            <p className="font-medium mt-1">{stage.investorType}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <h4 className="font-semibold mb-3">Funding Sources to Explore</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {startupRoadmap.fundingStrategy.sources.map((source, index) => (
+                        <Badge key={index} variant="outline">{source}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Team Building */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-6 h-6 text-blue-600" />
+                    Team Building Roadmap
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold mb-4 text-lg">Core Team Needs</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {startupRoadmap.teamBuilding.coreTeam.map((member, index) => (
+                        <Card key={index} className="border-2">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">{member.role}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div>
+                              <h5 className="text-sm font-medium text-muted-foreground mb-2">Key Skills:</h5>
+                              <div className="flex flex-wrap gap-1.5">
+                                {member.skills.map((skill, i) => (
+                                  <Badge key={i} variant="secondary">{skill}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-medium text-muted-foreground mb-1">Responsibilities:</h5>
+                              <ul className="text-sm space-y-1">
+                                {member.responsibilities.map((resp, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="text-primary">•</span>
+                                    <span>{resp}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-4 text-lg">Hiring Plan</h4>
+                    <div className="space-y-4">
+                      {startupRoadmap.teamBuilding.hiringPlan.map((phase, index) => (
+                        <div key={index} className="border-l-4 border-blue-500 pl-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-bold">{phase.phase}</h5>
+                            <span className="text-sm text-muted-foreground">{phase.timeline}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {phase.positions.map((pos, i) => (
+                              <Badge key={i}>{pos}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Milestones */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-6 h-6 text-indigo-600" />
+                    Key Milestones
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {startupRoadmap.milestones.map((milestone, index) => (
+                      <div key={index} className="relative">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold shadow-lg">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 border-l-4 border-indigo-200 pl-6 pb-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-lg font-bold">{milestone.milestone}</h4>
+                              <Badge variant="outline">{milestone.timeline}</Badge>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-4 mt-4">
+                              <div>
+                                <h5 className="font-semibold text-sm mb-2 text-muted-foreground">Key Deliverables</h5>
+                                <ul className="space-y-1">
+                                  {milestone.keyDeliverables.map((item, i) => (
+                                    <li key={i} className="text-sm flex items-start gap-2">
+                                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-sm mb-2 text-muted-foreground">Success Metrics</h5>
+                                <ul className="space-y-1">
+                                  {milestone.successMetrics.map((metric, i) => (
+                                    <li key={i} className="text-sm flex items-start gap-2">
+                                      <Award className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                                      <span>{metric}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {index < startupRoadmap.milestones.length - 1 && (
+                          <div className="absolute left-5 top-10 w-0.5 h-6 bg-indigo-200" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resources */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-6 h-6 text-emerald-600" />
+                    Essential Resources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <span className="text-xl">🛠️</span>
+                        Tools & Platforms
+                      </h4>
+                      <div className="space-y-2">
+                        {startupRoadmap.resources.tools.map((tool, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span>{tool}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <span className="text-xl">🌟</span>
+                        Launch Platforms
+                      </h4>
+                      <div className="space-y-2">
+                        {startupRoadmap.resources.platforms.map((platform, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span>{platform}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <span className="text-xl">🤝</span>
+                        Mentorship Programs
+                      </h4>
+                      <div className="space-y-2">
+                        {startupRoadmap.resources.mentorship.map((program, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span>{program}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <span className="text-xl">👥</span>
+                        Communities
+                      </h4>
+                      <div className="space-y-2">
+                        {startupRoadmap.resources.communities.map((community, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span>{community}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Call to Action */}
+              <Card className="border-2 border-orange-500 bg-gradient-to-br from-orange-50 to-amber-50">
+                <CardContent className="pt-6">
+                  <div className="text-center space-y-4">
+                    <h3 className="text-2xl font-bold">Ready to Launch Your Startup?</h3>
+                    <p className="text-muted-foreground max-w-2xl mx-auto">
+                      You have a comprehensive roadmap to guide your entrepreneurial journey. Start by working on your first milestone!
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3 pt-4">
+                      <Button size="lg" className="gap-2">
+                        <Download className="w-5 h-5" />
+                        Download Full Plan
+                      </Button>
+                      <Button variant="outline" size="lg" className="gap-2">
+                        <ArrowRight className="w-5 h-5" />
+                        Start Building
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         {/* Skills Analysis Tab */}

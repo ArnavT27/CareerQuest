@@ -9,10 +9,9 @@ interface PathSelectionProps {
   userName: string;
   onSelectPath: (path: "talents" | "scenarios") => void;
   onBack: () => void;
-  onNavigateToExpertConnect?: () => void;
 }
 
-export const PathSelection = ({ userName, onSelectPath, onBack, onNavigateToExpertConnect }: PathSelectionProps) => {
+export const PathSelection = ({ userName, onSelectPath, onBack }: PathSelectionProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const { logout } = useAuth();
@@ -222,23 +221,13 @@ export const PathSelection = ({ userName, onSelectPath, onBack, onNavigateToExpe
         <div className={`text-center transition-all duration-1000 delay-500 ${
           isLoaded ? 'animate-fade-in-up opacity-100' : 'opacity-0 translate-y-8'
         }`}>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            {onNavigateToExpertConnect && (
-              <Button
-                onClick={onNavigateToExpertConnect}
-                className="gradient-primary hover:shadow-primary transition-all duration-300 px-8 py-3 rounded-xl"
-              >
-                👥 Connect with Experts
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={onBack}
-              className="border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 px-8 py-3 rounded-xl backdrop-blur-sm"
-            >
-              ← Back to Start
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 px-8 py-3 rounded-xl backdrop-blur-sm"
+          >
+            ← Back to Start
+          </Button>
         </div>
       </div>
     </div>

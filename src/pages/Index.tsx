@@ -4,10 +4,8 @@ import { Landing } from "./Landing";
 import { PathSelection } from "./PathSelection";
 import { TalentsPath } from "./TalentsPath";
 import ScenariosPath from "./ScenariosPath";
-import ExpertConnect from "./ExpertConnect";
-import { CareerChatbot } from "@/components/CareerChatbot";
 
-type Screen = "landing" | "path-selection" | "talents" | "scenarios" | "expert-connect";
+type Screen = "landing" | "path-selection" | "talents" | "scenarios";
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>("landing");
@@ -37,10 +35,6 @@ const Index = () => {
     setCurrentScreen("path-selection");
   };
 
-  const handleNavigateToExpertConnect = () => {
-    setCurrentScreen("expert-connect");
-  };
-
   // Show landing page if user is not authenticated
   if (!user) {
     return (
@@ -51,13 +45,12 @@ const Index = () => {
   }
 
   return (
-    <main className="min-h-screen relative">
+    <main className="min-h-screen">
       {currentScreen === "path-selection" && (
         <PathSelection
           userName={user.name}
           onSelectPath={handleSelectPath}
           onBack={handleBackToLanding}
-          onNavigateToExpertConnect={handleNavigateToExpertConnect}
         />
       )}
       
@@ -65,7 +58,6 @@ const Index = () => {
         <TalentsPath
           userName={user.name}
           onBack={handleBackToPathSelection}
-          onNavigateToExpertConnect={handleNavigateToExpertConnect}
         />
       )}
       
@@ -73,21 +65,6 @@ const Index = () => {
         <ScenariosPath
           userName={user.name}
           onBack={handleBackToPathSelection}
-          onNavigateToExpertConnect={handleNavigateToExpertConnect}
-        />
-      )}
-
-      {currentScreen === "expert-connect" && (
-        <ExpertConnect
-          onBack={handleBackToPathSelection}
-        />
-      )}
-
-      {/* Global Chatbot - available on all authenticated pages */}
-      {user && currentScreen !== "landing" && (
-        <CareerChatbot 
-          userName={user.name}
-          fieldOfInterest={currentScreen === "talents" || currentScreen === "scenarios" ? undefined : undefined}
         />
       )}
     </main>
